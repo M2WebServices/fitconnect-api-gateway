@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package community;
+
+service CommunityService {
+  // User operations
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc GetUser (GetUserRequest) returns (UserResponse);
+
+  // Group operations
+  rpc CreateGroup (CreateGroupRequest) returns (GroupResponse);
+
+  // Membership operations
+  rpc AddMemberToGroup (AddMemberRequest) returns (MembershipResponse);
+  rpc GetGroupMembers (GetGroupMembersRequest) returns (GetGroupMembersResponse);
+  rpc IsUserInGroup (IsUserInGroupRequest) returns (IsUserInGroupResponse);
+  rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse);
+}
+
+// --- Messages ---
+
+// User
+message UserResponse {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string created_at = 4;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+// Group
+message GroupResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string created_at = 4;
+}
+
+message CreateGroupRequest {
+  string name = 1;
+  string description = 2;
+}
+
+// Membership
+message MembershipResponse {
+  string id = 1;
+  string user_id = 2;
+  string group_id = 3;
+  string role = 4; // "ADMIN" or "MEMBER"
+  string joined_at = 5;
+}
+
+message AddMemberRequest {
+  string user_id = 1;
+  string group_id = 2;
+  string role = 3; // Optional, defaults to "MEMBER"
+}
+
+message GetGroupMembersRequest {
+  string group_id = 1;
+}
+
+message GetGroupMembersResponse {
+  repeated MembershipResponse members = 1;
+}
+
+message IsUserInGroupRequest {
+  string user_id = 1;
+  string group_id = 2;
+}
+
+message IsUserInGroupResponse {
+  bool is_in_group = 1;
+}
+
+message IsAdminRequest {
+  string user_id = 1;
+  string group_id = 2;
+}
+
+message IsAdminResponse {
+  bool is_admin = 1;
+}

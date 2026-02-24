@@ -232,12 +232,25 @@ export const resolvers = {
         });
       }
 
+      const membership = await context.clients.community.isUserInGroup({
+        userId: context.user.userId,
+        groupId,
+      });
+      const isInGroup =
+        membership?.is_in_group ??
+        membership?.isInGroup ??
+        membership?.isInGroup === true;
+      if (!isInGroup) {
+        throw new GraphQLError('User is not a member of this group', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
       const response = await context.clients.event.createEvent({
         groupId,
         title,
         description: description || '',
         date,
-        createdBy: context.user.userId,
       });
       return response;
     },

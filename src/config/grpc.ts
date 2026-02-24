@@ -31,6 +31,10 @@ export function createGrpcClient(
     enums: String,
     defaults: true,
     oneofs: true,
+    includeDirs: [
+      path.join(process.cwd(), 'proto'),
+      path.join(process.cwd(), 'node_modules', 'google-proto-files'),
+    ],
   });
 
   const protoDescriptor: any = grpc.loadPackageDefinition(packageDefinition);

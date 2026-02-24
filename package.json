@@ -25,6 +25,7 @@
     "cors": "^2.8.5",
     "dataloader": "^2.2.2",
     "dotenv": "^16.3.1",
+    "google-proto-files": "^2.0.0",
     "graphql": "^16.8.1",
     "jsonwebtoken": "^9.0.2"
   },

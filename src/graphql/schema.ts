@@ -24,7 +24,7 @@ export const typeDefs = `
     date: String!
     groupId: ID!
     group: Group
-    createdBy: ID!
+    createdBy: ID
   }
 
   # Message Type

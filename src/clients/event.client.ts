@@ -1,6 +1,11 @@
 import { createGrpcClient, promisifyGrpcCall } from '../config/grpc';
 import env from '../config/env';
 
+type Timestamp = {
+  seconds?: number | string;
+  nanos?: number;
+};
+
 export interface EventClient {
   getEvent: (request: { eventId: string }) => Promise<any>;
   getGroupEvents: (request: { groupId: string }) => Promise<any>;
@@ -10,7 +15,6 @@ export interface EventClient {
     title: string;
     description: string;
     date: string;
-    createdBy: string;
   }) => Promise<any>;
   updateEvent: (request: {
     eventId: string;
@@ -23,89 +27,93 @@ export interface EventClient {
   close: () => void;
 }
 
+const toTimestamp = (date: string): Timestamp => {
+  const parsed = new Date(date);
+  const ms = parsed.getTime();
+  const seconds = Math.floor(ms / 1000);
+  const nanos = (ms % 1000) * 1_000_000;
+  return { seconds, nanos };
+};
+
+const fromTimestamp = (timestamp?: Timestamp): string | null => {
+  if (!timestamp || timestamp.seconds === undefined || timestamp.seconds === null) {
+    return null;
+  }
+
+  const seconds = typeof timestamp.seconds === 'string'
+    ? parseInt(timestamp.seconds, 10)
+    : timestamp.seconds;
+  const nanos = timestamp.nanos || 0;
+  const ms = seconds * 1000 + Math.floor(nanos / 1_000_000);
+  return new Date(ms).toISOString();
+};
+
+const mapEventResponse = (event: any) => {
+  if (!event) return event;
+
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description,
+    groupId: event.groupId,
+    date: fromTimestamp(event.date) || new Date().toISOString(),
+    createdAt: fromTimestamp(event.createdAt),
+  };
+};
+
 /**
  * Create Event Service gRPC client
  * Handles all event-related operations
  */
 export const createEventClient = (): EventClient => {
-  // TODO: Update with actual proto file path once available
-  // const grpcClient = createGrpcClient(
-  //   'event.proto',
-  //   'event',
-  //   'EventService',
-  //   env.grpc.eventServiceUrl
-  // );
+  console.log('Event Service client connecting to:', env.grpc.eventServiceUrl);
 
-  // Mock implementation for development
-  console.log('🔗 Event Service client connecting to:', env.grpc.eventServiceUrl);
+  const grpcClient = createGrpcClient(
+    'event.proto',
+    'event',
+    'EventService',
+    env.grpc.eventServiceUrl
+  );
+
+  const { client } = grpcClient;
+
+  const createEventProto = promisifyGrpcCall(client, 'CreateEvent');
+  const getEventProto = promisifyGrpcCall(client, 'GetEvent');
+  const listEventsByGroupProto = promisifyGrpcCall(client, 'ListEventsByGroup');
 
   return {
     getEvent: async (request: { eventId: string }) => {
-      console.log('Event.getEvent called with:', request);
-      return {
-        id: request.eventId,
-        title: 'Mock Event',
-        description: 'This is a mock event',
-        date: new Date().toISOString(),
-        groupId: 'group-1',
-        createdBy: 'user-1',
-      };
+      const response = await getEventProto({ id: request.eventId });
+      return mapEventResponse(response);
     },
     getGroupEvents: async (request: { groupId: string }) => {
-      console.log('Event.getGroupEvents called with:', request);
+      const response = await listEventsByGroupProto({ groupId: request.groupId });
       return {
-        events: [
-          {
-            id: 'event-1',
-            title: 'Morning Yoga',
-            description: 'Yoga session',
-            date: new Date().toISOString(),
-            groupId: request.groupId,
-            createdBy: 'user-1',
-          },
-        ],
+        events: (response.events || []).map(mapEventResponse),
       };
     },
-    getUserEvents: async (request: { userId: string }) => {
-      console.log('Event.getUserEvents called with:', request);
-      return {
-        events: [
-          {
-            id: 'event-1',
-            title: 'My Event',
-            description: 'User created event',
-            date: new Date().toISOString(),
-            groupId: 'group-1',
-            createdBy: request.userId,
-          },
-        ],
-      };
+    getUserEvents: async (_request: { userId: string }) => {
+      console.warn('GetUserEvents not implemented in EventService');
+      return { events: [] };
     },
     createEvent: async (request) => {
-      console.log('Event.createEvent called with:', request);
-      return {
-        id: 'new-event-id',
-        ...request,
-        createdAt: new Date().toISOString(),
-      };
+      const response = await createEventProto({
+        title: request.title,
+        description: request.description || '',
+        date: toTimestamp(request.date),
+        groupId: request.groupId,
+      });
+
+      return mapEventResponse(response);
     },
-    updateEvent: async (request) => {
-      console.log('Event.updateEvent called with:', request);
-      return {
-        id: request.eventId,
-        title: request.title || 'Updated Event',
-        description: request.description || 'Updated description',
-        date: request.date || new Date().toISOString(),
-        groupId: 'group-1',
-        createdBy: request.userId,
-      };
+    updateEvent: async (_request) => {
+      console.warn('UpdateEvent not implemented in EventService');
+      throw new Error('UpdateEvent not implemented in EventService');
     },
-    deleteEvent: async (request) => {
-      console.log('Event.deleteEvent called with:', request);
-      return { success: true };
+    deleteEvent: async (_request) => {
+      console.warn('DeleteEvent not implemented in EventService');
+      throw new Error('DeleteEvent not implemented in EventService');
     },
-    close: () => {
-      console.log('Event client closed');
-    },
+    close: () => grpcClient.close(),
   };
 };

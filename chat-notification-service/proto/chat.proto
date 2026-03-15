@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package chat;
+
+service ChatService {
+  rpc GetGroupMessages (GetGroupMessagesRequest) returns (GetGroupMessagesResponse);
+  rpc SendMessage (SendMessageRequest) returns (MessageResponse);
+  rpc DeleteMessage (DeleteMessageRequest) returns (DeleteMessageResponse);
+}
+
+message GetGroupMessagesRequest {
+  string groupId = 1;
+  int32 limit = 2;
+}
+
+message SendMessageRequest {
+  string groupId = 1;
+  string content = 2;
+  string senderId = 3;
+}
+
+message DeleteMessageRequest {
+  string messageId = 1;
+  string userId = 2;
+}
+
+message MessageResponse {
+  string id = 1;
+  string content = 2;
+  string senderId = 3;
+  string groupId = 4;
+  string createdAt = 5;
+}
+
+message GetGroupMessagesResponse {
+  repeated MessageResponse messages = 1;
+}
+
+message DeleteMessageResponse {
+  bool success = 1;
+}

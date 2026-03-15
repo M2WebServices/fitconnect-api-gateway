@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package ranking;
+
+service RankingService {
+  rpc GetLeaderboard (GetLeaderboardRequest) returns (GetLeaderboardResponse);
+  rpc GetUserRanking (GetUserRankingRequest) returns (RankingResponse);
+  rpc UpdateScore (UpdateScoreRequest) returns (RankingResponse);
+}
+
+message GetLeaderboardRequest {
+  int32 limit = 1;
+}
+
+message GetUserRankingRequest {
+  string userId = 1;
+}
+
+message UpdateScoreRequest {
+  string userId = 1;
+  int32 points = 2;
+}
+
+message RankingResponse {
+  string userId = 1;
+  int32 score = 2;
+  int32 rank = 3;
+}
+
+message GetLeaderboardResponse {
+  repeated RankingResponse rankings = 1;
+}

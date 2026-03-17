@@ -3,6 +3,7 @@ import * as protoLoader from "@grpc/proto-loader";
 import { GRPC_ADDRESS, GRPC_INCLUDE_DIRS, GRPC_PROTO_PATH } from "../config/grpc";
 import { EventService } from "../modules/event/event.service";
 import { ParticipationService } from "../modules/participation/participation.service";
+import { WorkoutService } from "../modules/workout/workout.service";
 import { fromTimestamp, toEventResponse, toParticipantResponse, toTimestamp } from "./event.mapper";
 
 const packageDefinition = protoLoader.loadSync(GRPC_PROTO_PATH, {
@@ -49,6 +50,7 @@ export const startGrpcServer = () => {
   const server = new grpc.Server();
   const eventService = new EventService();
   const participationService = new ParticipationService();
+  const workoutService = new WorkoutService();
 
   server.addService(proto.event.EventService.service, {
     CreateEvent: async (
@@ -168,6 +170,50 @@ export const startGrpcServer = () => {
         callback(null, {
           participants: participants.map(toParticipantResponse)
         });
+      } catch (error) {
+        callback(mapError(error), null);
+      }
+    },
+    CompleteWorkoutSession: async (
+      call: grpc.ServerUnaryCall<
+        {
+          workoutSessionId: string;
+          userId: string;
+          completedAt?: string;
+          durationMinutes?: number;
+          caloriesBurned?: number;
+          eventId?: string;
+          groupId?: string;
+        },
+        unknown
+      >,
+      callback: grpc.sendUnaryData<unknown>
+    ) => {
+      try {
+        const session = await workoutService.completeWorkoutSession({
+          workoutSessionId: call.request.workoutSessionId,
+          userId: call.request.userId,
+          completedAt: call.request.completedAt,
+          durationMinutes: call.request.durationMinutes,
+          caloriesBurned: call.request.caloriesBurned,
+          eventId: call.request.eventId,
+          groupId: call.request.groupId,
+        });
+        callback(null, session);
+      } catch (error) {
+        callback(mapError(error), null);
+      }
+    },
+    ListUserWorkoutSessions: async (
+      call: grpc.ServerUnaryCall<{ userId: string; limit?: number }, unknown>,
+      callback: grpc.sendUnaryData<unknown>
+    ) => {
+      try {
+        const sessions = await workoutService.listUserWorkoutSessions(
+          call.request.userId,
+          call.request.limit ?? 20
+        );
+        callback(null, { sessions });
       } catch (error) {
         callback(mapError(error), null);
       }

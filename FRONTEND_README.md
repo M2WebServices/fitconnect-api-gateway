@@ -2,6 +2,29 @@
 
 Ce document explique comment consommer toutes les requetes exposees par la gateway GraphQL depuis ton frontend.
 
+## 0) Suivi des dependances backend (mise a jour continue)
+
+Statut actuel (du plus prioritaire au moins prioritaire):
+
+1. Challenges API dediee via gateway
+- Statut: FAIT (etape 1)
+- Ajouts: `challenges`, `challengeParticipants(challengeId)`
+
+2. Planning/Workout API dediee via gateway
+- Statut: FAIT (etape 2)
+- Ajouts: `myWorkoutSessions(limit)`, `completeWorkoutSession(...)`
+
+3. Temps reel chat (WebSocket) via gateway
+- Statut: FAIT (etape 3)
+- Ajouts: `chatRealtimeConfig`
+
+4. Profil utilisateur (update profile)
+- Statut: FAIT (etape 4)
+- Ajouts: `updateMyProfile(email, pseudo)`
+
+5. Auth avancee (forgot/reset password)
+- Statut: A FAIRE
+
 ## 1) Endpoints a utiliser
 
 - Gateway GraphQL (frontend -> gateway): http://localhost:4100/
@@ -287,6 +310,84 @@ query MyRanking {
 }
 ```
 
+### challenges
+Recupere la liste des challenges backend.
+
+```graphql
+query Challenges {
+  challenges {
+    id
+    eventId
+    groupId
+    title
+    createdAt
+    pointsReward
+  }
+}
+```
+
+### challengeParticipants(challengeId)
+Recupere les participants d'un challenge.
+
+```graphql
+query ChallengeParticipants($challengeId: ID!) {
+  challengeParticipants(challengeId: $challengeId) {
+    id
+    challengeId
+    userId
+    joinedAt
+    completed
+    completedAt
+    user {
+      id
+      username
+      email
+    }
+  }
+}
+```
+
+### myWorkoutSessions(limit)
+Recupere les seances completees de l'utilisateur connecte.
+
+```graphql
+query MyWorkoutSessions($limit: Int) {
+  myWorkoutSessions(limit: $limit) {
+    workoutSessionId
+    userId
+    completedAt
+    durationMinutes
+    caloriesBurned
+    eventId
+    groupId
+    user {
+      id
+      username
+      email
+    }
+  }
+}
+```
+
+### chatRealtimeConfig
+Recupere la configuration officielle du canal temps reel chat a utiliser cote frontend.
+
+```graphql
+query ChatRealtimeConfig {
+  chatRealtimeConfig {
+    wsUrl
+    events
+    heartbeatSeconds
+  }
+}
+```
+
+Exemple d'usage frontend:
+
+1. Appeler `chatRealtimeConfig` via gateway.
+2. Ouvrir un WebSocket sur `wsUrl` (ex: `ws://localhost:4105/ws`).
+3. Ecouter les events `WORKOUT_COMPLETED` et `EVENT_CREATED`.
+
 ## Mutations
 
 ### createGroup(name, description)
@@ -437,6 +538,59 @@ mutation UpdateScore($userId: ID!, $points: Int!) {
     score
     rank
   }
+}
+```
+
+### completeWorkoutSession(...)
+Enregistre une seance completee pour l'utilisateur connecte et publie l'evenement metier cote backend.
+
+```graphql
+mutation CompleteWorkoutSession(
+  $workoutSessionId: ID!
+  $completedAt: String
+  $durationMinutes: Int
+  $caloriesBurned: Int
+  $eventId: ID
+  $groupId: ID
+) {
+  completeWorkoutSession(
+    workoutSessionId: $workoutSessionId
+    completedAt: $completedAt
+    durationMinutes: $durationMinutes
+    caloriesBurned: $caloriesBurned
+    eventId: $eventId
+    groupId: $groupId
+  ) {
+    workoutSessionId
+    userId
+    completedAt
+    durationMinutes
+    caloriesBurned
+    eventId
+    groupId
+  }
+}
+```
+
+### updateMyProfile(email, pseudo)
+Met a jour le profil de l'utilisateur connecte.
+
+```graphql
+mutation UpdateMyProfile($email: String, $pseudo: String) {
+  updateMyProfile(email: $email, pseudo: $pseudo) {
+    id
+    username
+    email
+  }
+}
+```
+
+Variables exemple:
+
+```json
+{
+  "email": "new-email@example.com",
+  "pseudo": "newPseudo"
 }
 ```
 

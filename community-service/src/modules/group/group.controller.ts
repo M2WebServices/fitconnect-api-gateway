@@ -21,13 +21,15 @@ export class GroupController {
   }
 
   @GrpcMethod('CommunityService', 'GetGroup')
-  async grpcGetGroup(request: { group_id: string }): Promise<IGroup> {
-    return this.groupService.getGroupById(request.group_id);
+  async grpcGetGroup(request: { group_id?: string; groupId?: string }): Promise<IGroup> {
+    const groupId = request.group_id || request.groupId || '';
+    return this.groupService.getGroupById(groupId);
   }
 
   @GrpcMethod('CommunityService', 'GetUserGroups')
-  async grpcGetUserGroups(request: { user_id: string }): Promise<{ groups: IGroup[] }> {
-    const groups = await this.groupService.getGroupsForUser(request.user_id);
+  async grpcGetUserGroups(request: { user_id?: string; userId?: string }): Promise<{ groups: IGroup[] }> {
+    const userId = request.user_id || request.userId || '';
+    const groups = await this.groupService.getGroupsForUser(userId);
     return { groups };
   }
 
@@ -39,13 +41,17 @@ export class GroupController {
 
   @GrpcMethod('CommunityService', 'UpdateGroup')
   async grpcUpdateGroup(request: {
-    group_id: string;
+    group_id?: string;
+    groupId?: string;
     name?: string;
     description?: string;
     user_id?: string;
+    userId?: string;
   }): Promise<IGroup> {
     void request.user_id;
-    return this.groupService.updateGroup(request.group_id, {
+    void request.userId;
+    const groupId = request.group_id || request.groupId || '';
+    return this.groupService.updateGroup(groupId, {
       name: request.name,
       description: request.description,
     });
@@ -53,11 +59,15 @@ export class GroupController {
 
   @GrpcMethod('CommunityService', 'DeleteGroup')
   async grpcDeleteGroup(request: {
-    group_id: string;
+    group_id?: string;
+    groupId?: string;
     user_id?: string;
+    userId?: string;
   }): Promise<{ success: boolean }> {
     void request.user_id;
-    const success = await this.groupService.deleteGroup(request.group_id);
+    void request.userId;
+    const groupId = request.group_id || request.groupId || '';
+    const success = await this.groupService.deleteGroup(groupId);
     return { success };
   }
 

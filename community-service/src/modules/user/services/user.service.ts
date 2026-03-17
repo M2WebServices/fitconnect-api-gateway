@@ -13,6 +13,44 @@ export class UserService {
    * Vérifie l'unicité de l'email
    */
   async createUser(createUserDto: CreateUserDto): Promise<IUser> {
+    // Idempotent sync path: if caller provides an ID and user already exists,
+    // return existing user (and refresh profile fields if needed).
+    if (createUserDto.id) {
+      const existingById = await this.userRepository.findById(createUserDto.id);
+      if (existingById) {
+        const needsUpdate =
+          existingById.email !== createUserDto.email ||
+          existingById.username !== createUserDto.username;
+
+        if (!needsUpdate) {
+          return this.mapUserToInterface(existingById);
+        }
+
+        const existingEmail = await this.userRepository.findByEmail(createUserDto.email);
+        if (existingEmail && existingEmail.id !== existingById.id) {
+          throw new ConflictException(
+            `Un utilisateur avec l'email ${createUserDto.email} existe déjà`,
+          );
+        }
+
+        const existingUsername = await this.userRepository.findByUsername(
+          createUserDto.username,
+        );
+        if (existingUsername && existingUsername.id !== existingById.id) {
+          throw new ConflictException(
+            `Un utilisateur avec le username ${createUserDto.username} existe déjà`,
+          );
+        }
+
+        const updated = await this.userRepository.updateUser(existingById.id, {
+          email: createUserDto.email,
+          username: createUserDto.username,
+        });
+
+        return this.mapUserToInterface(updated ?? existingById);
+      }
+    }
+
     // Vérifier l'unicité de l'email
     const existingUser = await this.userRepository.findByEmail(createUserDto.email);
     if (existingUser) {

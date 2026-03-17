@@ -1,5 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { GraphQLContext } from './context';
+import env from '../config/env';
 
 export const resolvers = {
   Query: {
@@ -143,6 +144,60 @@ export const resolvers = {
         userId: context.user.userId,
       });
       return response;
+    },
+
+    challenges: async (_: any, __: any, context: GraphQLContext) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      const response = await context.clients.ranking.getChallenges();
+      return response.challenges || [];
+    },
+
+    challengeParticipants: async (
+      _: any,
+      { challengeId }: { challengeId: string },
+      context: GraphQLContext
+    ) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      const response = await context.clients.ranking.getChallengeParticipants({ challengeId });
+      return response.participants || [];
+    },
+
+    myWorkoutSessions: async (_: any, { limit = 20 }: { limit?: number }, context: GraphQLContext) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      const response = await context.clients.event.listUserWorkoutSessions({
+        userId: context.user.userId,
+        limit,
+      });
+      return response.sessions || [];
+    },
+
+    chatRealtimeConfig: async (_: any, __: any, context: GraphQLContext) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      return {
+        wsUrl: env.realtime.chatWsUrl,
+        events: ['WS_CONNECTED', 'WORKOUT_COMPLETED', 'EVENT_CREATED'],
+        heartbeatSeconds: 30,
+      };
     },
   },
 
@@ -389,6 +444,72 @@ export const resolvers = {
       });
       return response;
     },
+
+    completeWorkoutSession: async (
+      _: any,
+      {
+        workoutSessionId,
+        completedAt,
+        durationMinutes,
+        caloriesBurned,
+        eventId,
+        groupId,
+      }: {
+        workoutSessionId: string;
+        completedAt?: string;
+        durationMinutes?: number;
+        caloriesBurned?: number;
+        eventId?: string;
+        groupId?: string;
+      },
+      context: GraphQLContext
+    ) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      return context.clients.event.completeWorkoutSession({
+        workoutSessionId,
+        userId: context.user.userId,
+        completedAt,
+        durationMinutes,
+        caloriesBurned,
+        eventId,
+        groupId,
+      });
+    },
+
+    updateMyProfile: async (
+      _: any,
+      { email, pseudo }: { email?: string; pseudo?: string },
+      context: GraphQLContext
+    ) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      if (!email && !pseudo) {
+        throw new GraphQLError('At least one field is required', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      const updated = await context.clients.auth.updateUserProfile({
+        userId: context.user.userId,
+        email,
+        pseudo,
+      });
+
+      return {
+        id: updated.id,
+        email: updated.email,
+        username: updated.pseudo,
+      };
+    },
   },
 
   // Field resolvers for nested data
@@ -430,6 +551,20 @@ export const resolvers = {
   },
 
   Participant: {
+    user: async (parent: any, _: any, context: GraphQLContext) => {
+      if (!parent.userId) return null;
+      return context.loaders.userLoader.load(parent.userId);
+    },
+  },
+
+  ChallengeParticipant: {
+    user: async (parent: any, _: any, context: GraphQLContext) => {
+      if (!parent.userId) return null;
+      return context.loaders.userLoader.load(parent.userId);
+    },
+  },
+
+  WorkoutSession: {
     user: async (parent: any, _: any, context: GraphQLContext) => {
       if (!parent.userId) return null;
       return context.loaders.userLoader.load(parent.userId);

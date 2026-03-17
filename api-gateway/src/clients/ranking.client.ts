@@ -5,6 +5,8 @@ export interface RankingClient {
   getLeaderboard: (request: { limit: number }) => Promise<any>;
   getUserRanking: (request: { userId: string }) => Promise<any>;
   updateScore: (request: { userId: string; points: number }) => Promise<any>;
+  getChallenges: () => Promise<any>;
+  getChallengeParticipants: (request: { challengeId: string }) => Promise<any>;
   close: () => void;
 }
 
@@ -26,6 +28,8 @@ export const createRankingClient = (): RankingClient => {
   const getLeaderboardProto = promisifyGrpcCall(client, 'GetLeaderboard');
   const getUserRankingProto = promisifyGrpcCall(client, 'GetUserRanking');
   const updateScoreProto = promisifyGrpcCall(client, 'UpdateScore');
+  const getChallengesProto = promisifyGrpcCall(client, 'GetChallenges');
+  const getChallengeParticipantsProto = promisifyGrpcCall(client, 'GetChallengeParticipants');
 
   return {
     getLeaderboard: async (request: { limit: number }) => {
@@ -36,6 +40,12 @@ export const createRankingClient = (): RankingClient => {
     },
     updateScore: async (request) => {
       return updateScoreProto({ userId: request.userId, points: request.points });
+    },
+    getChallenges: async () => {
+      return getChallengesProto({});
+    },
+    getChallengeParticipants: async (request) => {
+      return getChallengeParticipantsProto({ challengeId: request.challengeId });
     },
     close: () => {
       grpcClient.close();

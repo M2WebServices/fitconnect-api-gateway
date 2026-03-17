@@ -2,7 +2,13 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import path from "path";
 import { env } from "../config/env";
-import { addPoints, getLeaderboard, getUserRanking } from "../modules/scoring";
+import {
+  addPoints,
+  getChallengeParticipations,
+  getChallenges,
+  getLeaderboard,
+  getUserRanking,
+} from "../modules/scoring";
 
 const PROTO_PATH = path.join(__dirname, "../../proto/ranking.proto");
 
@@ -61,6 +67,36 @@ const updateScoreHandler = async (
   }
 };
 
+const getChallengesHandler = async (
+  _call: grpc.ServerUnaryCall<Record<string, never>, { challenges: unknown[] }>,
+  callback: grpc.sendUnaryData<{ challenges: unknown[] }>
+) => {
+  try {
+    const challenges = await getChallenges();
+    callback(null, { challenges });
+  } catch (error) {
+    callback({
+      code: grpc.status.INTERNAL,
+      details: error instanceof Error ? error.message : "Failed to get challenges",
+    });
+  }
+};
+
+const getChallengeParticipantsHandler = async (
+  call: grpc.ServerUnaryCall<{ challengeId: string }, { participants: unknown[] }>,
+  callback: grpc.sendUnaryData<{ participants: unknown[] }>
+) => {
+  try {
+    const participants = await getChallengeParticipations(call.request.challengeId);
+    callback(null, { participants });
+  } catch (error) {
+    callback({
+      code: grpc.status.INTERNAL,
+      details: error instanceof Error ? error.message : "Failed to get challenge participants",
+    });
+  }
+};
+
 const rankingServiceImpl = {
   // Keep both casings for compatibility with proto-loader method name mapping.
   GetLeaderboard: getLeaderboardHandler,
@@ -69,6 +105,10 @@ const rankingServiceImpl = {
   getUserRanking: getUserRankingHandler,
   UpdateScore: updateScoreHandler,
   updateScore: updateScoreHandler,
+  GetChallenges: getChallengesHandler,
+  getChallenges: getChallengesHandler,
+  GetChallengeParticipants: getChallengeParticipantsHandler,
+  getChallengeParticipants: getChallengeParticipantsHandler,
 };
 
 export const startGrpcServer = (): grpc.Server => {

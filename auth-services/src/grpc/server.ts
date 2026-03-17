@@ -36,6 +36,18 @@ interface ValidateTokenResponse {
   pseudo?: string;
 }
 
+interface UpdateUserProfileRequest {
+  user_id: string;
+  email?: string;
+  pseudo?: string;
+}
+
+interface UpdateUserProfileResponse {
+  id: string;
+  email: string;
+  pseudo: string;
+}
+
 const authServiceImpl = {
   async getUser(
     call: grpc.ServerUnaryCall<GetUserRequest, GetUserResponse>,
@@ -89,6 +101,32 @@ const authServiceImpl = {
       callback({
         code: grpc.status.INTERNAL,
         details: 'Internal server error',
+      });
+    }
+  },
+
+  async updateUserProfile(
+    call: grpc.ServerUnaryCall<UpdateUserProfileRequest, UpdateUserProfileResponse>,
+    callback: grpc.sendUnaryData<UpdateUserProfileResponse>
+  ) {
+    try {
+      const { user_id, email, pseudo } = call.request;
+      const user = await authModule.updateUserProfile({
+        userId: user_id,
+        email,
+        pseudo,
+      });
+
+      callback(null, {
+        id: user.id,
+        email: user.email,
+        pseudo: user.pseudo,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Internal server error';
+      callback({
+        code: grpc.status.INTERNAL,
+        details: message,
       });
     }
   },

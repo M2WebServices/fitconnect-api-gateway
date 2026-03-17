@@ -6,6 +6,8 @@ service RankingService {
   rpc GetLeaderboard (GetLeaderboardRequest) returns (GetLeaderboardResponse);
   rpc GetUserRanking (GetUserRankingRequest) returns (RankingResponse);
   rpc UpdateScore (UpdateScoreRequest) returns (RankingResponse);
+  rpc GetChallenges (GetChallengesRequest) returns (GetChallengesResponse);
+  rpc GetChallengeParticipants (GetChallengeParticipantsRequest) returns (GetChallengeParticipantsResponse);
 }
 
 message GetLeaderboardRequest {
@@ -29,4 +31,36 @@ message RankingResponse {
 
 message GetLeaderboardResponse {
   repeated RankingResponse rankings = 1;
+}
+
+message GetChallengesRequest {}
+
+message ChallengeResponse {
+  string id = 1;
+  string eventId = 2;
+  string groupId = 3;
+  string title = 4;
+  string createdAt = 5;
+  int32 pointsReward = 6;
+}
+
+message GetChallengesResponse {
+  repeated ChallengeResponse challenges = 1;
+}
+
+message GetChallengeParticipantsRequest {
+  string challengeId = 1;
+}
+
+message ChallengeParticipantResponse {
+  string id = 1;
+  string challengeId = 2;
+  string userId = 3;
+  string joinedAt = 4;
+  bool completed = 5;
+  string completedAt = 6;
+}
+
+message GetChallengeParticipantsResponse {
+  repeated ChallengeParticipantResponse participants = 1;
 }

@@ -13,6 +13,8 @@ service EventService {
   rpc DeleteEvent (DeleteEventRequest) returns (DeleteEventResponse);
   rpc JoinEvent (JoinEventRequest) returns (JoinEventResponse);
   rpc GetParticipants (GetParticipantsRequest) returns (GetParticipantsResponse);
+  rpc CompleteWorkoutSession (CompleteWorkoutSessionRequest) returns (WorkoutSessionResponse);
+  rpc ListUserWorkoutSessions (ListUserWorkoutSessionsRequest) returns (ListUserWorkoutSessionsResponse);
 }
 
 message CreateEventRequest {
@@ -85,4 +87,33 @@ message ParticipantResponse {
 
 message GetParticipantsResponse {
   repeated ParticipantResponse participants = 1;
+}
+
+message CompleteWorkoutSessionRequest {
+  string workoutSessionId = 1;
+  string userId = 2;
+  string completedAt = 3;
+  int32 durationMinutes = 4;
+  int32 caloriesBurned = 5;
+  string eventId = 6;
+  string groupId = 7;
+}
+
+message WorkoutSessionResponse {
+  string workoutSessionId = 1;
+  string userId = 2;
+  string completedAt = 3;
+  int32 durationMinutes = 4;
+  int32 caloriesBurned = 5;
+  string eventId = 6;
+  string groupId = 7;
+}
+
+message ListUserWorkoutSessionsRequest {
+  string userId = 1;
+  int32 limit = 2;
+}
+
+message ListUserWorkoutSessionsResponse {
+  repeated WorkoutSessionResponse sessions = 1;
 }

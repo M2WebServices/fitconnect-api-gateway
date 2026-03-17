@@ -15,6 +15,8 @@ export type WorkoutCompletedPayload = {
   userId: string;
   workoutSessionId: string;
   completedAt: string;
+  eventId?: string;
+  groupId?: string;
   durationMinutes?: number;
   caloriesBurned?: number;
 };

@@ -22,6 +22,9 @@ interface EnvConfig {
   cors: {
     origin: string;
   };
+  realtime: {
+    chatWsUrl: string;
+  };
 }
 
 const env: EnvConfig = {
@@ -41,6 +44,9 @@ const env: EnvConfig = {
   },
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  },
+  realtime: {
+    chatWsUrl: process.env.CHAT_WS_URL || 'ws://localhost:4105/ws',
   },
 };
 

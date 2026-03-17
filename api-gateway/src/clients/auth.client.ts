@@ -17,6 +17,7 @@ export type AuthValidation = {
 export interface AuthClient {
   getUser: (request: { userId: string }) => Promise<AuthUser | null>;
   validateToken: (request: { token: string }) => Promise<AuthValidation>;
+  updateUserProfile: (request: { userId: string; email?: string; pseudo?: string }) => Promise<AuthUser>;
   close: () => void;
 }
 
@@ -28,6 +29,7 @@ export const createAuthClient = (): AuthClient => {
 
   const getUserProto = promisifyGrpcCall(client, 'GetUser');
   const validateTokenProto = promisifyGrpcCall(client, 'ValidateToken');
+  const updateUserProfileProto = promisifyGrpcCall(client, 'UpdateUserProfile');
 
   return {
     getUser: async ({ userId }) => {
@@ -44,6 +46,18 @@ export const createAuthClient = (): AuthClient => {
     },
     validateToken: async ({ token }) => {
       return validateTokenProto({ token });
+    },
+    updateUserProfile: async ({ userId, email, pseudo }) => {
+      const response = await updateUserProfileProto({
+        user_id: userId,
+        email,
+        pseudo,
+      });
+      return {
+        id: response.id,
+        email: response.email,
+        pseudo: response.pseudo,
+      };
     },
     close: () => {
       grpcClient.close();

@@ -36,13 +36,17 @@ export class MembershipController {
   // gRPC Method
   @GrpcMethod('CommunityService', 'AddMemberToGroup')
   async grpcAddMemberToGroup(request: {
-    user_id: string;
-    group_id: string;
+    user_id?: string;
+    userId?: string;
+    group_id?: string;
+    groupId?: string;
     role?: string;
   }): Promise<IMembership> {
+    const userId = request.user_id || request.userId || '';
+    const groupId = request.group_id || request.groupId || '';
     return this.membershipService.addMemberToGroup(
-      request.user_id,
-      request.group_id,
+      userId,
+      groupId,
       request.role as any,
     );
   }
@@ -61,12 +65,16 @@ export class MembershipController {
 
   @GrpcMethod('CommunityService', 'RemoveMemberFromGroup')
   async grpcRemoveMemberFromGroup(request: {
-    user_id: string;
-    group_id: string;
+    user_id?: string;
+    userId?: string;
+    group_id?: string;
+    groupId?: string;
   }): Promise<{ success: boolean }> {
+    const userId = request.user_id || request.userId || '';
+    const groupId = request.group_id || request.groupId || '';
     const success = await this.membershipService.removeMemberFromGroup(
-      request.user_id,
-      request.group_id,
+      userId,
+      groupId,
     );
     return { success };
   }
@@ -84,12 +92,16 @@ export class MembershipController {
   // gRPC Method
   @GrpcMethod('CommunityService', 'IsUserInGroup')
   async grpcIsUserInGroup(request: {
-    user_id: string;
-    group_id: string;
+    user_id?: string;
+    userId?: string;
+    group_id?: string;
+    groupId?: string;
   }): Promise<{ is_in_group: boolean }> {
+    const userId = request.user_id || request.userId || '';
+    const groupId = request.group_id || request.groupId || '';
     const isInGroup = await this.membershipService.isUserInGroup(
-      request.user_id,
-      request.group_id,
+      userId,
+      groupId,
     );
     return { is_in_group: isInGroup };
   }
@@ -107,12 +119,16 @@ export class MembershipController {
   // gRPC Method
   @GrpcMethod('CommunityService', 'IsAdmin')
   async grpcIsAdmin(request: {
-    user_id: string;
-    group_id: string;
+    user_id?: string;
+    userId?: string;
+    group_id?: string;
+    groupId?: string;
   }): Promise<{ is_admin: boolean }> {
+    const userId = request.user_id || request.userId || '';
+    const groupId = request.group_id || request.groupId || '';
     const isAdmin = await this.membershipService.isUserAdmin(
-      request.user_id,
-      request.group_id,
+      userId,
+      groupId,
     );
     return { is_admin: isAdmin };
   }
@@ -126,9 +142,11 @@ export class MembershipController {
   // gRPC Method
   @GrpcMethod('CommunityService', 'GetGroupMembers')
   async grpcGetGroupMembers(request: {
-    group_id: string;
+    group_id?: string;
+    groupId?: string;
   }): Promise<{ members: IMembership[] }> {
-    const members = await this.membershipService.getGroupMembers(request.group_id);
+    const groupId = request.group_id || request.groupId || '';
+    const members = await this.membershipService.getGroupMembers(groupId);
     return { members };
   }
 

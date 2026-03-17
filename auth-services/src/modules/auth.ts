@@ -26,6 +26,12 @@ export interface SignInInput {
   password: string;
 }
 
+export interface UpdateProfileInput {
+  userId: string;
+  email?: string;
+  pseudo?: string;
+}
+
 export interface TokenPayload {
   userId: string;
   email: string;
@@ -176,6 +182,53 @@ export async function getUserById(id: string): Promise<UserPayload | null> {
 }
 
 /**
+ * Update user profile fields (email and/or pseudo)
+ */
+export async function updateUserProfile(input: UpdateProfileInput): Promise<UserPayload> {
+  const prisma = getPrismaClient();
+
+  const current = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!current) {
+    throw new Error("User not found");
+  }
+
+  const nextEmail = input.email?.trim();
+  const nextPseudo = input.pseudo?.trim();
+
+  if (nextEmail && nextEmail !== current.email) {
+    const existingEmail = await prisma.user.findUnique({ where: { email: nextEmail } });
+    if (existingEmail && existingEmail.id !== input.userId) {
+      throw new Error("Email already registered");
+    }
+  }
+
+  if (nextPseudo && nextPseudo !== current.pseudo) {
+    const existingPseudo = await prisma.user.findUnique({ where: { pseudo: nextPseudo } });
+    if (existingPseudo && existingPseudo.id !== input.userId) {
+      throw new Error("Pseudo already taken");
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: input.userId },
+    data: {
+      email: nextEmail ?? current.email,
+      pseudo: nextPseudo ?? current.pseudo,
+    },
+  });
+
+  if (!updated) {
+    throw new Error("User not found");
+  }
+
+  return {
+    id: updated.id,
+    email: updated.email,
+    pseudo: updated.pseudo,
+  };
+}
+
+/**
  * Invalidate token (logout)
  */
 export async function invalidateToken(token: string): Promise<void> {
@@ -207,5 +260,19 @@ export async function validateToken(token: string): Promise<TokenPayload | null>
 
   // Verify token signature and expiration
   const payload = verifyToken(token);
-  return payload;
+  if (!payload) {
+    return null;
+  }
+
+  // Keep payload values in sync with latest profile updates.
+  const user = await getUserById(payload.userId);
+  if (!user) {
+    return null;
+  }
+
+  return {
+    userId: user.id,
+    email: user.email,
+    pseudo: user.pseudo,
+  };
 }

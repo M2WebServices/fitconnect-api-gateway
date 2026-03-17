@@ -23,5 +23,38 @@ export const dataSource = new DataSource({
 export const initializeDatabase = async () => {
   if (!dataSource.isInitialized) {
     await dataSource.initialize();
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS event (
+        id UUID PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        date TIMESTAMP NOT NULL,
+        group_id UUID NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS participation (
+        id UUID PRIMARY KEY,
+        event_id UUID NOT NULL REFERENCES event(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL,
+        joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        CONSTRAINT participation_event_user_unique UNIQUE (event_id, user_id)
+      )
+    `);
+
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS workout_sessions (
+        workout_session_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        completed_at TIMESTAMPTZ NOT NULL,
+        duration_minutes INTEGER NOT NULL DEFAULT 0,
+        calories_burned INTEGER NOT NULL DEFAULT 0,
+        event_id TEXT,
+        group_id TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
   }
 };

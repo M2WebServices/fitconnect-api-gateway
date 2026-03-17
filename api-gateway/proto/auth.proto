@@ -5,6 +5,7 @@ package auth;
 service AuthService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
 }
 
 message GetUserRequest {
@@ -26,4 +27,16 @@ message ValidateTokenResponse {
   string user_id = 2;
   string email = 3;
   string pseudo = 4;
+}
+
+message UpdateUserProfileRequest {
+  string user_id = 1;
+  string email = 2;
+  string pseudo = 3;
+}
+
+message UpdateUserProfileResponse {
+  string id = 1;
+  string email = 2;
+  string pseudo = 3;
 }

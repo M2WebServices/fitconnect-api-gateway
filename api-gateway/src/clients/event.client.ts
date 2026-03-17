@@ -26,6 +26,16 @@ export interface EventClient {
   deleteEvent: (request: { eventId: string; userId: string }) => Promise<any>;
   joinEvent: (request: { eventId: string; userId: string }) => Promise<any>;
   getEventParticipants: (request: { eventId: string }) => Promise<any>;
+  completeWorkoutSession: (request: {
+    workoutSessionId: string;
+    userId: string;
+    completedAt?: string;
+    durationMinutes?: number;
+    caloriesBurned?: number;
+    eventId?: string;
+    groupId?: string;
+  }) => Promise<any>;
+  listUserWorkoutSessions: (request: { userId: string; limit?: number }) => Promise<any>;
   close: () => void;
 }
 
@@ -87,6 +97,8 @@ export const createEventClient = (): EventClient => {
   const deleteEventProto = promisifyGrpcCall(client, 'DeleteEvent');
   const joinEventProto = promisifyGrpcCall(client, 'JoinEvent');
   const getParticipantsProto = promisifyGrpcCall(client, 'GetParticipants');
+  const completeWorkoutSessionProto = promisifyGrpcCall(client, 'CompleteWorkoutSession');
+  const listUserWorkoutSessionsProto = promisifyGrpcCall(client, 'ListUserWorkoutSessions');
 
   return {
     getEvent: async (request: { eventId: string }) => {
@@ -149,6 +161,23 @@ export const createEventClient = (): EventClient => {
     getEventParticipants: async (request) => {
       return getParticipantsProto({
         eventId: request.eventId,
+      });
+    },
+    completeWorkoutSession: async (request) => {
+      return completeWorkoutSessionProto({
+        workoutSessionId: request.workoutSessionId,
+        userId: request.userId,
+        completedAt: request.completedAt,
+        durationMinutes: request.durationMinutes,
+        caloriesBurned: request.caloriesBurned,
+        eventId: request.eventId,
+        groupId: request.groupId,
+      });
+    },
+    listUserWorkoutSessions: async (request) => {
+      return listUserWorkoutSessionsProto({
+        userId: request.userId,
+        limit: request.limit,
       });
     },
     close: () => grpcClient.close(),

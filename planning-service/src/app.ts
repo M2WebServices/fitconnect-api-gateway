@@ -10,7 +10,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/internal/workouts/completed", async (req, res) => {
-  const { userId, workoutSessionId, completedAt, durationMinutes, caloriesBurned } = req.body ?? {};
+  const { userId, workoutSessionId, completedAt, durationMinutes, caloriesBurned, eventId, groupId } = req.body ?? {};
 
   if (!userId || !workoutSessionId) {
     res.status(400).json({
@@ -26,6 +26,8 @@ app.post("/internal/workouts/completed", async (req, res) => {
     completedAt: completedAt || new Date().toISOString(),
     durationMinutes,
     caloriesBurned,
+    eventId,
+    groupId,
   });
 
   res.status(202).json({ published: true });

@@ -20,6 +20,16 @@ type CreateArgs = {
   data: UserRecord;
 };
 
+type UpdateArgs = {
+  where: {
+    id: string;
+  };
+  data: {
+    email?: string;
+    pseudo?: string;
+  };
+};
+
 let pool: Pool | null = null;
 
 const createPoolConfig = (): PoolConfig => {
@@ -107,6 +117,41 @@ const userRepository = {
     );
 
     return mapUser(result.rows[0]);
+  },
+
+  async update(args: UpdateArgs): Promise<UserRecord | null> {
+    const { id } = args.where;
+    const { email, pseudo } = args.data;
+
+    const assignments: string[] = [];
+    const values: Array<string> = [];
+
+    if (email !== undefined) {
+      assignments.push(`email = $${values.length + 1}`);
+      values.push(email);
+    }
+    if (pseudo !== undefined) {
+      assignments.push(`pseudo = $${values.length + 1}`);
+      values.push(pseudo);
+    }
+
+    if (assignments.length === 0) {
+      return this.findUnique({ where: { id } });
+    }
+
+    const client = getPool();
+    values.push(id);
+    const result = await client.query(
+      `
+      UPDATE auth_users
+      SET ${assignments.join(", ")}
+      WHERE id = $${values.length}
+      RETURNING id, email, pseudo, password_hash
+      `,
+      values
+    );
+
+    return result.rows[0] ? mapUser(result.rows[0]) : null;
   },
 };
 

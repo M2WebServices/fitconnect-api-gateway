@@ -45,6 +45,42 @@ export const typeDefs = `
     rank: Int!
   }
 
+  type Challenge {
+    id: ID!
+    eventId: ID!
+    groupId: ID!
+    title: String!
+    createdAt: String!
+    pointsReward: Int!
+  }
+
+  type ChallengeParticipant {
+    id: ID!
+    challengeId: ID!
+    userId: ID!
+    user: User
+    joinedAt: String!
+    completed: Boolean!
+    completedAt: String
+  }
+
+  type WorkoutSession {
+    workoutSessionId: ID!
+    userId: ID!
+    user: User
+    completedAt: String!
+    durationMinutes: Int!
+    caloriesBurned: Int!
+    eventId: ID
+    groupId: ID
+  }
+
+  type ChatRealtimeConfig {
+    wsUrl: String!
+    events: [String!]!
+    heartbeatSeconds: Int!
+  }
+
   # Participant Type
   type Participant {
     userId: ID!
@@ -74,6 +110,16 @@ export const typeDefs = `
     # Ranking queries
     leaderboard(limit: Int): [Ranking!]!
     myRanking: Ranking
+
+    # Challenge queries
+    challenges: [Challenge!]!
+    challengeParticipants(challengeId: ID!): [ChallengeParticipant!]!
+
+    # Planning/workout queries
+    myWorkoutSessions(limit: Int): [WorkoutSession!]!
+
+    # Realtime chat config
+    chatRealtimeConfig: ChatRealtimeConfig!
   }
 
   # Mutations
@@ -107,6 +153,19 @@ export const typeDefs = `
 
     # Ranking mutations
     updateScore(userId: ID!, points: Int!): Ranking
+
+    # Planning/workout mutations
+    completeWorkoutSession(
+      workoutSessionId: ID!
+      completedAt: String
+      durationMinutes: Int
+      caloriesBurned: Int
+      eventId: ID
+      groupId: ID
+    ): WorkoutSession!
+
+    # Profile mutations
+    updateMyProfile(email: String, pseudo: String): User!
   }
 
   # Subscriptions (optional - for real-time features)

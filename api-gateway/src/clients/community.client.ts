@@ -17,6 +17,7 @@ export interface CommunityClient {
   createUser: (request: { id?: string; username: string; email: string }) => Promise<any>;
   getUser: (request: { id: string }) => Promise<any>;
   addMemberToGroup: (request: { userId: string; groupId: string; role?: string }) => Promise<any>;
+  removeMemberFromGroup: (request: { userId: string; groupId: string }) => Promise<any>;
   isUserInGroup: (request: { userId: string; groupId: string }) => Promise<any>;
   isAdmin: (request: { userId: string; groupId: string }) => Promise<any>;
   
@@ -73,6 +74,11 @@ export const createCommunityClient = (): CommunityClient => {
         user_id: request.userId,
         group_id: request.groupId,
         role: request.role,
+      }),
+    removeMemberFromGroup: async (request) =>
+      removeMemberFromGroup({
+        user_id: request.userId,
+        group_id: request.groupId,
       }),
     isUserInGroup: async (request) =>
       isUserInGroup({

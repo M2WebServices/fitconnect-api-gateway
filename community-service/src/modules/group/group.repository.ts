@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import { Group } from './group.entity';
 import { CreateGroupDto } from './create-group.dto';
 
@@ -33,6 +33,17 @@ export class GroupRepository {
   async findAll(): Promise<Group[]> {
     return this.repository.find({
       relations: ['memberships'],
+    });
+  }
+
+  async findByIds(ids: string[]): Promise<Group[]> {
+    if (!ids.length) {
+      return [];
+    }
+
+    return this.repository.find({
+      where: { id: In(ids) },
+      order: { createdAt: 'DESC' },
     });
   }
 

@@ -22,9 +22,13 @@ async function startServer() {
     await initializeDatabase();
     console.log('✓ Database initialized');
 
-    // Initialize Redis cache
-    await initializeRedis();
-    console.log('✓ Redis cache initialized');
+    // Initialize Redis cache (optional in local dev)
+    try {
+      await initializeRedis();
+      console.log('✓ Redis cache initialized');
+    } catch {
+      console.warn('⚠ Redis cache disabled');
+    }
 
     // Setup Apollo GraphQL
     const apolloServer = new ApolloServer({

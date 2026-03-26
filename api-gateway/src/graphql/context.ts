@@ -52,16 +52,27 @@ export const createContext = async ({ req, clients }: ContextParams): Promise<Gr
 
         // Ensure corresponding user record exists in community service (same UUID as auth).
         if (!syncedUserIds.has(user.userId)) {
+          let syncSucceeded = false;
           try {
             await clients.community.createUser({
               id: user.userId,
               username: user.username,
               email: user.email,
             });
+            syncSucceeded = true;
           } catch {
-            // ConflictException means user already exists — that's fine.
+            // ConflictException means user already exists.
+            try {
+              await clients.community.getUser({ id: user.userId });
+              syncSucceeded = true;
+            } catch {
+              syncSucceeded = false;
+            }
           }
-          syncedUserIds.add(user.userId);
+
+          if (syncSucceeded) {
+            syncedUserIds.add(user.userId);
+          }
         }
       }
     }

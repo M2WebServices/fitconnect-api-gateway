@@ -2,6 +2,12 @@ import { GraphQLError } from 'graphql';
 import { GraphQLContext } from './context';
 import env from '../config/env';
 
+const isTrue = (value: unknown): boolean => value === true;
+const isValidMembershipRole = (value: string): boolean => value === 'ADMIN' || value === 'MEMBER';
+
+const normalizeIsAdmin = (result: any): boolean =>
+  isTrue(result?.is_admin) || isTrue(result?.isAdmin);
+
 export const resolvers = {
   Query: {
     // Auth/User queries
@@ -223,13 +229,37 @@ export const resolvers = {
       // Auto-add creator as group ADMIN
       if (response && response.id) {
         try {
+          await context.clients.community.createUser({
+            id: context.user.userId,
+            username: context.user.username,
+            email: context.user.email,
+          });
+        } catch {
+          // ConflictException means user already exists.
+        }
+
+        try {
           await context.clients.community.addMemberToGroup({
             userId: context.user.userId,
             groupId: response.id,
             role: 'ADMIN',
           });
-        } catch {
-          // Already member or non-critical failure
+        } catch (error) {
+          try {
+            await context.clients.community.deleteGroup({
+              groupId: response.id,
+              userId: context.user.userId,
+            });
+          } catch {
+            // Best effort rollback for partially created groups.
+          }
+
+          throw new GraphQLError('Group created but failed to assign ADMIN membership to creator', {
+            extensions: {
+              code: 'INTERNAL_SERVER_ERROR',
+              details: error instanceof Error ? error.message : 'Unknown membership error',
+            },
+          });
         }
       }
 
@@ -244,6 +274,17 @@ export const resolvers = {
       if (!context.user) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      const adminStatus = await context.clients.community.isAdmin({
+        userId: context.user.userId,
+        groupId: id,
+      });
+
+      if (!normalizeIsAdmin(adminStatus)) {
+        throw new GraphQLError('Only group admins can update this group', {
+          extensions: { code: 'FORBIDDEN' },
         });
       }
 
@@ -263,10 +304,106 @@ export const resolvers = {
         });
       }
 
+      const adminStatus = await context.clients.community.isAdmin({
+        userId: context.user.userId,
+        groupId: id,
+      });
+
+      if (!normalizeIsAdmin(adminStatus)) {
+        throw new GraphQLError('Only group admins can delete this group', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
       await context.clients.community.deleteGroup({
         groupId: id,
         userId: context.user.userId,
       });
+      return true;
+    },
+
+    addGroupMember: async (
+      _: any,
+      { groupId, userId, role = 'MEMBER' }: { groupId: string; userId: string; role?: string },
+      context: GraphQLContext
+    ) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      const adminStatus = await context.clients.community.isAdmin({
+        userId: context.user.userId,
+        groupId,
+      });
+
+      if (!normalizeIsAdmin(adminStatus)) {
+        throw new GraphQLError('Only group admins can add members', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      const normalizedRole = (role || 'MEMBER').toUpperCase();
+      if (!isValidMembershipRole(normalizedRole)) {
+        throw new GraphQLError('Invalid role. Allowed values: ADMIN, MEMBER', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      const targetUser = await context.clients.auth.getUser({ userId });
+      if (!targetUser) {
+        throw new GraphQLError('Target user not found', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      try {
+        await context.clients.community.createUser({
+          id: targetUser.id,
+          username: targetUser.pseudo,
+          email: targetUser.email,
+        });
+      } catch {
+        // User already exists in community service.
+      }
+
+      await context.clients.community.addMemberToGroup({
+        userId,
+        groupId,
+        role: normalizedRole,
+      });
+
+      return true;
+    },
+
+    removeGroupMember: async (
+      _: any,
+      { groupId, userId }: { groupId: string; userId: string },
+      context: GraphQLContext
+    ) => {
+      if (!context.user) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      const adminStatus = await context.clients.community.isAdmin({
+        userId: context.user.userId,
+        groupId,
+      });
+
+      if (!normalizeIsAdmin(adminStatus)) {
+        throw new GraphQLError('Only group admins can remove members', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      await context.clients.community.removeMemberFromGroup({
+        userId,
+        groupId,
+      });
+
       return true;
     },
 
@@ -320,9 +457,8 @@ export const resolvers = {
         groupId,
       });
       const isInGroup =
-        membership?.is_in_group ??
-        membership?.isInGroup ??
-        membership?.isInGroup === true;
+        isTrue(membership?.is_in_group) ||
+        isTrue(membership?.isInGroup);
       if (!isInGroup) {
         throw new GraphQLError('User is not a member of this group', {
           extensions: { code: 'FORBIDDEN' },

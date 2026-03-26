@@ -27,20 +27,79 @@ const run = (command) => {
   return result.status ?? 1;
 };
 
+const runCapture = (command) => {
+  const result = spawnSync(command, {
+    cwd: ROOT,
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+    encoding: "utf8",
+  });
+
+  return {
+    status: result.status ?? 1,
+    stdout: (result.stdout || "").trim(),
+    stderr: (result.stderr || "").trim(),
+  };
+};
+
+const ensureContainer = ({ name, createCommand }) => {
+  const inspect = runCapture(`docker container inspect ${name}`);
+  if (inspect.status !== 0) {
+    console.log(`[local-up] Creating missing container: ${name}`);
+    const created = run(createCommand);
+    if (created !== 0) {
+      throw new Error(`Failed to create Docker container ${name}`);
+    }
+  }
+};
+
+const waitForPostgres = () => {
+  for (let i = 0; i < 20; i += 1) {
+    const ready = runCapture("docker exec -i fitconnect-planning-db pg_isready -U postgres");
+    if (ready.status === 0) {
+      return;
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+  }
+
+  throw new Error("Postgres container is not ready");
+};
+
 const ensureDockerInfra = () => {
+  ensureContainer({
+    name: "fitconnect-redis",
+    createCommand: "docker run -d --name fitconnect-redis -p 6379:6379 redis:7-alpine",
+  });
+
+  ensureContainer({
+    name: "fitconnect-planning-db",
+    createCommand:
+      "docker run -d --name fitconnect-planning-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres -p 5432:5432 postgres:16-alpine",
+  });
+
   console.log("[local-up] Starting Docker services (redis + postgres)...");
-  run("docker start fitconnect-redis fitconnect-planning-db");
+  const started = run("docker start fitconnect-redis fitconnect-planning-db");
+  if (started !== 0) {
+    throw new Error("Failed to start Docker infrastructure");
+  }
+
+  waitForPostgres();
 
   console.log("[local-up] Ensuring databases and schema...");
-  run(
+  const planningDb = run(
     'docker exec -i fitconnect-planning-db sh -lc "psql -U postgres -d postgres -tAc \"SELECT 1 FROM pg_database WHERE datname=\\\'planning_service\\\'\" | grep -q 1 || psql -U postgres -d postgres -c \"CREATE DATABASE planning_service;\""'
   );
-  run(
+  const communityDb = run(
     'docker exec -i fitconnect-planning-db sh -lc "psql -U postgres -d postgres -tAc \"SELECT 1 FROM pg_database WHERE datname=\\\'fitconnect_community\\\'\" | grep -q 1 || psql -U postgres -d postgres -c \"CREATE DATABASE fitconnect_community;\""'
   );
-  run(
+  const schema = run(
     'docker exec -i fitconnect-planning-db psql -U postgres -d fitconnect_community -c "CREATE SCHEMA IF NOT EXISTS community;"'
   );
+
+  if (planningDb !== 0 || communityDb !== 0 || schema !== 0) {
+    throw new Error("Failed to initialize PostgreSQL databases/schemas");
+  }
 };
 
 const startService = (service) => {

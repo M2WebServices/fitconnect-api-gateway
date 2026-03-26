@@ -128,6 +128,8 @@ export const typeDefs = `
     createGroup(name: String!, description: String): Group
     updateGroup(id: ID!, name: String, description: String): Group
     deleteGroup(id: ID!): Boolean
+    addGroupMember(groupId: ID!, userId: ID!, role: String = "MEMBER"): Boolean
+    removeGroupMember(groupId: ID!, userId: ID!): Boolean
     joinGroup(groupId: ID!): Boolean
     leaveGroup(groupId: ID!): Boolean
 

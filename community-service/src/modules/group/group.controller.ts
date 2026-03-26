@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus, ForbiddenException } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { CreateGroupDto } from './create-group.dto';
 import { IGroup } from './group.interface';
 import { GroupService } from './services/group.service';
+import { MembershipService } from '../membership/services/membership.service';
 
 @Controller('groups')
 export class GroupController {
-  constructor(private readonly groupService: GroupService) {}
+  constructor(
+    private readonly groupService: GroupService,
+    private readonly membershipService: MembershipService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -48,9 +52,14 @@ export class GroupController {
     user_id?: string;
     userId?: string;
   }): Promise<IGroup> {
-    void request.user_id;
-    void request.userId;
+    const actorUserId = request.user_id || request.userId || '';
     const groupId = request.group_id || request.groupId || '';
+
+    const isAdmin = await this.membershipService.isUserAdmin(actorUserId, groupId);
+    if (!isAdmin) {
+      throw new ForbiddenException('Only group admins can update this group');
+    }
+
     return this.groupService.updateGroup(groupId, {
       name: request.name,
       description: request.description,
@@ -64,9 +73,14 @@ export class GroupController {
     user_id?: string;
     userId?: string;
   }): Promise<{ success: boolean }> {
-    void request.user_id;
-    void request.userId;
+    const actorUserId = request.user_id || request.userId || '';
     const groupId = request.group_id || request.groupId || '';
+
+    const isAdmin = await this.membershipService.isUserAdmin(actorUserId, groupId);
+    if (!isAdmin) {
+      throw new ForbiddenException('Only group admins can delete this group');
+    }
+
     const success = await this.groupService.deleteGroup(groupId);
     return { success };
   }

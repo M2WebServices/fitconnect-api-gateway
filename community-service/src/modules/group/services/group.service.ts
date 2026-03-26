@@ -3,10 +3,14 @@ import { GroupRepository } from '../group.repository';
 import { CreateGroupDto } from '../create-group.dto';
 import { Group } from '../group.entity';
 import { IGroup } from '../group.interface';
+import { MembershipRepository } from '../../membership/membership.repository';
 
 @Injectable()
 export class GroupService {
-  constructor(private readonly groupRepository: GroupRepository) {}
+  constructor(
+    private readonly groupRepository: GroupRepository,
+    private readonly membershipRepository: MembershipRepository,
+  ) {}
 
   /**
    * Crée un nouveau groupe
@@ -77,10 +81,17 @@ export class GroupService {
       throw new BadRequestException('userId is required');
     }
 
-    const groups = await this.groupRepository.findAll();
-    return groups
-      .filter((group) => group.memberships?.some((m) => m.userId === userId))
-      .map((group) => this.mapGroupToInterface(group));
+    const memberships = await this.membershipRepository.findMembershipsByUserId(userId);
+    const groupIds = Array.from(
+      new Set(memberships.map((membership) => membership.groupId).filter(Boolean)),
+    );
+
+    if (groupIds.length === 0) {
+      return [];
+    }
+
+    const groups = await this.groupRepository.findByIds(groupIds);
+    return groups.map((group) => this.mapGroupToInterface(group));
   }
 
   /**

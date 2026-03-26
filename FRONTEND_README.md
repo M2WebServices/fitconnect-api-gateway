@@ -25,6 +25,10 @@ Statut actuel (du plus prioritaire au moins prioritaire):
 5. Auth avancee (forgot/reset password)
 - Statut: A FAIRE
 
+6. Gestion admin des membres de groupe
+- Statut: FAIT
+- Ajouts: `addGroupMember(groupId, userId, role)`, `removeGroupMember(groupId, userId)`
+
 ## 1) Endpoints a utiliser
 
 - Gateway GraphQL (frontend -> gateway): http://localhost:4100/
@@ -148,6 +152,7 @@ query Me {
 
 ### group(id)
 Retourne un groupe par son ID.
+Note: le role de membership n'est pas encore expose par membre dans cette query.
 
 ```graphql
 query Group($id: ID!) {
@@ -167,6 +172,7 @@ query Group($id: ID!) {
 
 ### myGroups
 Liste les groupes de l'utilisateur connecte.
+La liste est basee sur les memberships (groupes ou l'utilisateur est membre).
 
 ```graphql
 query MyGroups {
@@ -426,6 +432,133 @@ mutation DeleteGroup($id: ID!) {
   deleteGroup(id: $id)
 }
 ```
+
+### addGroupMember(groupId, userId, role)
+Ajoute un utilisateur dans un groupe.
+Condition metier: seul un ADMIN du groupe peut executer cette mutation.
+
+```graphql
+mutation AddGroupMember($groupId: ID!, $userId: ID!, $role: String) {
+  addGroupMember(groupId: $groupId, userId: $userId, role: $role)
+}
+```
+
+Variables exemple:
+
+```json
+{
+  "groupId": "GROUP_ID",
+  "userId": "USER_ID",
+  "role": "MEMBER"
+}
+```
+
+### removeGroupMember(groupId, userId)
+Retire un utilisateur d'un groupe.
+Condition metier: seul un ADMIN du groupe peut executer cette mutation.
+
+```graphql
+mutation RemoveGroupMember($groupId: ID!, $userId: ID!) {
+  removeGroupMember(groupId: $groupId, userId: $userId)
+}
+```
+
+## 5.b) Package final pour la page Community
+
+Requetes/mutations a utiliser pour finaliser la page Community:
+
+- Liste de mes groupes: `myGroups`
+- Recherche de groupes: `searchGroups(query)`
+- Detail d'un groupe + membres: `group(id)`
+- Creation groupe: `createGroup(name, description)`
+- Edition groupe (admin): `updateGroup(id, name, description)`
+- Suppression groupe (admin): `deleteGroup(id)`
+- Rejoindre/quitter groupe: `joinGroup(groupId)`, `leaveGroup(groupId)`
+- Gestion membres (admin): `addGroupMember(groupId, userId, role)`, `removeGroupMember(groupId, userId)`
+
+Regles metier importantes:
+
+- `myGroups` renvoie uniquement les groupes ou l'utilisateur est membre.
+- Le createur est automatiquement rattache en `ADMIN` a la creation du groupe.
+- `updateGroup`, `deleteGroup`, `addGroupMember`, `removeGroupMember` exigent un utilisateur admin du groupe.
+- Le role admin n'est pas directement detectable via `group(id)` tant que le backend n'expose pas un champ de role (`members.role` ou `myRoleInGroup`).
+
+Sequence de validation recommande (meme token):
+
+1. `createGroup`
+2. `myGroups` (le nouveau groupe doit apparaitre)
+3. `addGroupMember`
+4. `group(id)` (verifier que le membre apparait dans `members`)
+5. `removeGroupMember`
+
+Exemple de cycle complet (copier/coller):
+
+```graphql
+mutation CommunityCreateGroup($name: String!, $description: String) {
+  createGroup(name: $name, description: $description) {
+    id
+    name
+    createdAt
+  }
+}
+```
+
+```graphql
+query CommunityMyGroups {
+  myGroups {
+    id
+    name
+    description
+    createdAt
+  }
+}
+```
+
+```graphql
+mutation CommunityAddMember($groupId: ID!, $userId: ID!, $role: String) {
+  addGroupMember(groupId: $groupId, userId: $userId, role: $role)
+}
+```
+
+```graphql
+query CommunityGroup($id: ID!) {
+  group(id: $id) {
+    id
+    name
+    members {
+      id
+      username
+      email
+    }
+  }
+}
+```
+
+```graphql
+mutation CommunityRemoveMember($groupId: ID!, $userId: ID!) {
+  removeGroupMember(groupId: $groupId, userId: $userId)
+}
+```
+
+Gestion d'erreurs recommandee (page Community):
+
+- `UNAUTHENTICATED`: token absent/expire, rediriger vers la page login.
+- `FORBIDDEN`: utilisateur non admin sur action admin (update/delete/add/remove membre).
+- `BAD_USER_INPUT`: `userId` invalide ou role invalide (`ADMIN` ou `MEMBER` uniquement).
+- `NOT_FOUND`: groupe ou utilisateur introuvable.
+
+Checklist UI minimale pour finaliser la page:
+
+1. Charger `myGroups` au montage de page.
+2. Au createGroup, relancer `myGroups` immediatement.
+3. Tant que `role` n'est pas expose dans `group(id)`, baser la detection admin sur les erreurs `FORBIDDEN` des mutations admin.
+4. Apres `addGroupMember` / `removeGroupMember`, recharger `group(id)` pour rafraichir la liste des membres.
+5. Si `FORBIDDEN`, masquer ou desactiver les actions admin pour le groupe courant.
+6. Normaliser les erreurs GraphQL en messages utilisateur lisibles.
+
+Amelioration recommandee backend (option):
+
+- Exposer `myRoleInGroup(groupId)` ou enrichir `group(id)` avec le role de l'utilisateur courant pour afficher/masquer les actions admin des le chargement.
 
 ### joinGroup(groupId)
 Rejoint un groupe.

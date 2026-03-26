@@ -45,5 +45,8 @@ coverage/
 # Local orchestration state
 .local-services.json
 
+# Local development scripts
+scripts/
+
 # Frontend specific
 FRONTEND*

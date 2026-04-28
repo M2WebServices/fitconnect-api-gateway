@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree -L 3 -d /c/Users/myhan/Desktop/Ynov_Work/M2/M2WebServices/fitconnect-api-gateway --ignore node_modules)"
+    ]
+  }
+}

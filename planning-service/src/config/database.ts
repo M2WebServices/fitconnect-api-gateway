@@ -25,7 +25,7 @@ export const initializeDatabase = async () => {
     await dataSource.initialize();
     await dataSource.query(`
       CREATE TABLE IF NOT EXISTS event (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         title TEXT NOT NULL,
         description TEXT,
         date TIMESTAMP NOT NULL,
@@ -35,13 +35,21 @@ export const initializeDatabase = async () => {
     `);
 
     await dataSource.query(`
+      ALTER TABLE event ALTER COLUMN id SET DEFAULT gen_random_uuid()
+    `);
+
+    await dataSource.query(`
       CREATE TABLE IF NOT EXISTS participation (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         event_id UUID NOT NULL REFERENCES event(id) ON DELETE CASCADE,
         user_id UUID NOT NULL,
         joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
         CONSTRAINT participation_event_user_unique UNIQUE (event_id, user_id)
       )
+    `);
+
+    await dataSource.query(`
+      ALTER TABLE participation ALTER COLUMN id SET DEFAULT gen_random_uuid()
     `);
 
     await dataSource.query(`

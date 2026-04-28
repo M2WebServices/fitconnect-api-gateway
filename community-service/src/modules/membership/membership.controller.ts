@@ -96,14 +96,14 @@ export class MembershipController {
     userId?: string;
     group_id?: string;
     groupId?: string;
-  }): Promise<{ is_in_group: boolean }> {
+  }): Promise<{ isInGroup: boolean }> {
     const userId = request.user_id || request.userId || '';
     const groupId = request.group_id || request.groupId || '';
     const isInGroup = await this.membershipService.isUserInGroup(
       userId,
       groupId,
     );
-    return { is_in_group: isInGroup };
+    return { isInGroup };
   }
 
   @Get('check-admin')
@@ -123,14 +123,14 @@ export class MembershipController {
     userId?: string;
     group_id?: string;
     groupId?: string;
-  }): Promise<{ is_admin: boolean }> {
+  }): Promise<{ isAdmin: boolean }> {
     const userId = request.user_id || request.userId || '';
     const groupId = request.group_id || request.groupId || '';
     const isAdmin = await this.membershipService.isUserAdmin(
       userId,
       groupId,
     );
-    return { is_admin: isAdmin };
+    return { isAdmin };
   }
 
   @Get('group/:groupId/members')

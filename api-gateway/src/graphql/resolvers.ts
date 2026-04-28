@@ -414,6 +414,16 @@ export const resolvers = {
         });
       }
 
+      try {
+        await context.clients.community.createUser({
+          id: context.user.userId,
+          username: context.user.username,
+          email: context.user.email,
+        });
+      } catch {
+        // User already exists in community service.
+      }
+
       await context.clients.community.joinGroup({
         groupId,
         userId: context.user.userId,
